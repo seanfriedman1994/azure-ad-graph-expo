@@ -84,6 +84,7 @@ async function getToken(code, props) {
   });
 
   let accessToken = tokenResponse.access_token;
+  let refreshToken = tokenResponse.refresh_token;
   let expires_in = tokenResponse.expires_in;
   
   let graphResponse = await callMsGraph(accessToken);
@@ -92,6 +93,7 @@ async function getToken(code, props) {
     userId : graphResponse.userId,
     displayName : graphResponse.displayName,
     token : accessToken,
+    refreshToken : refreshToken, //this may or may not be set based on your scope.
     expiresIn : expires_in
   }
 
