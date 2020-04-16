@@ -2,6 +2,7 @@
 --All API calls now hit the v2.0 endpoints.
 
 --Function now returns UserData and Token object with UserId, DisplayName, Token, RefreshToken, and Expires_In properties.
+
 --IMPORTANT: In order for UserId and DisplayName to be populated, scope must include 'user.read', or another scope that includes user   data
 
 # azure-ad-graph-expo
