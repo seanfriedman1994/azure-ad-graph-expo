@@ -1,4 +1,5 @@
 // +------------------------------------------------------------------------------------------+
+// | ------------------EDITED By SeanFriedman1994 for OAuth v2.0------------------------------|                                                                                      |
 // |                                                                                          |
 // | AzureADGraph.js                                                                          |
 // | ---------------                                                                          |
@@ -18,6 +19,7 @@
 
 /* imports */
 import { AuthSession } from 'expo'; // AuthSession: for opening the authorization URL
+import {AsyncStorage} from 'react-native';
 
 /*
   openAuthSession
@@ -26,10 +28,11 @@ import { AuthSession } from 'expo'; // AuthSession: for opening the authorizatio
   returns:  getToken() - calls getToken which calls callMsGraph to return the user data from the Graph API
 */
 export async function openAuthSession(props) {
+
   let authResponse = await AuthSession.startAsync({
     authUrl:
-      `https://login.microsoftonline.com/${props.tenantId}/oauth2/authorize?client_id=${props.clientId}&response_type=code&redirect_uri=${encodeURIComponent(props.redirectUrl)}`,
-  });
+      `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${props.clientId}&response_type=code&redirect_uri=${encodeURIComponent(props.redirectUrl)}&responsemode=query&scope=${props.scope}`, 
+    });
   return await getToken(authResponse.params.code, props);
 }
 
@@ -44,12 +47,11 @@ export async function openAuthSession(props) {
 async function getToken(code, props) {
   /* parse/gather correct key values for the POST request to the token endpoint */
   var requestParams = {
+    grant_type: 'authorization_code',
     client_id: props.clientId,
-    scope: props.scope,
     code: code,
     redirect_uri: props.redirectUrl,
-    grant_type: 'authorization_code',
-    client_secret: props.clientSecret,
+    scope: props.scope
   }
 
   /* loop through object and encode each item as URI component before storing in array */
@@ -60,26 +62,40 @@ async function getToken(code, props) {
     var encodedKey = encodeURIComponent(p);
     var encodedValue = encodeURIComponent(requestParams[p]);
     formBody.push(encodedKey + '=' + encodedValue);
-  }
+  } 
   formBody = formBody.join('&');
 
   /* make a POST request using fetch and the body params we just setup */
   let tokenResponse = null;
-  await fetch(`https://login.microsoftonline.com/${props.tenantId}/oauth2/v2.0/token`, {
+
+  await fetch(`https://login.microsoftonline.com/common/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
+      'Host': 'login.microsoftonline.com',
       'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
     },
-    body: formBody,
+    body: formBody
   })
   .then((response) => response.json())
   .then((response) => {
     tokenResponse = response;
   })
   .catch((error) => {
-    console.error(error);
   });
-  return await callMsGraph(tokenResponse.access_token);
+
+  let accessToken = tokenResponse.access_token;
+  let expires_in = tokenResponse.expires_in;
+  
+  let graphResponse = await callMsGraph(accessToken);
+
+  let userData = {
+    userId : graphResponse.userId,
+    displayName : graphResponse.displayName,
+    token : accessToken,
+    expiresIn : expires_in
+  }
+
+  return userData;
 }
 
 /*
@@ -94,6 +110,7 @@ async function callMsGraph(token) {
   await fetch('https://graph.microsoft.com/v1.0/me', {
     method: 'GET',
     headers: {
+      'Host' : 'graph.microsoft.com',
       'Authorization': 'Bearer ' + token,
     }
   })
@@ -102,7 +119,7 @@ async function callMsGraph(token) {
     graphResponse = response;
   })
   .catch((error) => {
-    console.error(error);
   });
+
   return graphResponse;
 }
