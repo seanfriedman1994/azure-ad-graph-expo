@@ -17,6 +17,7 @@ import React from 'react';
 import { StyleSheet, View, Text, Button } from 'react-native'
 import { AuthSession } from 'expo';
 import { openAuthSession } from 'azure-ad-graph-expo';
+import { AsyncStorage } from 'react-native';
 
 export default class App extends React.Component {
   state = {
@@ -26,7 +27,7 @@ export default class App extends React.Component {
   render() {
     return (
       <View style={styles.container}>
-        <Button title="Login" onPress={this._handlePressAsync} />
+        <Button title="Login" onPress={loginAsync()} />
         {this.state.result ? (
           <Text>{JSON.stringify(this.state.result)}</Text>
         ) : <Text>Nothing to see here.</Text>}
@@ -34,11 +35,87 @@ export default class App extends React.Component {
     );
   }
 
+const loginAsync = async () => {
+    return async dispatch => {
+
+      let response;
+
+      try
+      {
+        response = await openAuthSession(azureAdAppProps);
+      }
+      catch(err)
+      {
+        let message;
+        if(err.error)
+        {
+          message = err.error.message;
+        }
+        else
+        {
+          message = 'An unkown error occured.'
+        }
+
+        throw new Error(message);
+      }
+  
+      try
+      {
+        const resData =  response;
+        dispatch(
+          authenticate(
+            resData.userId,
+            resData.displayName,
+            resData.token,
+            resData.refreshToken,
+            parseInt(resData.expiresIn) * 1000
+          )
+        );
+        const expirationDate = new Date(
+          new Date().getTime() + parseInt(resData.expiresIn) * 1000
+        );
+        saveDataToStorage(resData.userId, resData.displayName, resData.token,
+          resData.refreshToken, expirationDate);
+        }
+      catch(err)
+      {
+        let message;
+        if(err.error)
+        {
+          message = err.error.message;
+        }
+        else
+        {
+          message = 'An unkown error occured.'
+        }
+
+        throw new Error(message);
+      }
+      
+    };
+  };
+
+
   _handlePressAsync = async () => {
-    let result = await openAuthSession(azureAdAppProps);
+    let result = await loginAsync();
     this.setState({ result });
   }
 }
+
+
+  const saveDataToStorage = (userId, displayName, token, refreshToken, expirationDate) => {
+    AsyncStorage.setItem(
+      'userData',
+      JSON.stringify({
+        userId: userId,
+        displayName : displayName,
+        token: token,
+        refreshToken: refreshToken,
+        expiryDate: expirationDate.toISOString()
+      })
+    );
+  };
+
 
 const azureAdAppProps = {
   clientId: 'client_id',
