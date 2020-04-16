@@ -3,7 +3,7 @@
 
 --Function now returns UserData and Token object with UserId, DisplayName, Token, RefreshToken, and Expires_In properties.
 
---IMPORTANT: In order for UserId and DisplayName to be populated, scope must include 'user.read', or another scope that includes user   data
+--IMPORTANT: In order for UserId and DisplayName to be populated, scope must include 'user.read', or another scope that includes user   data. Similarly, RefreshToken will only be populated with a 'offline_access' scope included.
 
 # azure-ad-graph-expo
 #### by pinecat
